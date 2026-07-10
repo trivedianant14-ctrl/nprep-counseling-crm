@@ -17,8 +17,12 @@
     graphRange: 7,
     adminView: "overview",
     assignCohort: "all",
-    assignTag: "all",
-    assignCounselorId: ""
+    assignTags: [],
+    assignCounselorId: "",
+    manageFilterCounselor: "all",
+    reassignFrom: "",
+    reassignTo: "",
+    drawerAdminMode: false
   };
 
   const COHORT_LABELS = {
@@ -285,6 +289,7 @@
     const titles = {
       overview: "Assignment Overview",
       assign: "Assign Leads",
+      manage: "Manage Assignments",
       onboard: "Onboard Counselor"
     };
     document.getElementById("adminTitle").textContent = titles[state.adminView];
@@ -293,10 +298,12 @@
     );
     document.getElementById("adminOverviewView").hidden = state.adminView !== "overview";
     document.getElementById("adminAssignView").hidden = state.adminView !== "assign";
+    document.getElementById("adminManageView").hidden = state.adminView !== "manage";
     document.getElementById("adminOnboardView").hidden = state.adminView !== "onboard";
 
     if (state.adminView === "overview") renderAdminOverview();
     if (state.adminView === "assign") renderAdminAssign();
+    if (state.adminView === "manage") renderAdminManage();
     if (state.adminView === "onboard") renderAdminOnboard();
   }
 
@@ -324,7 +331,7 @@
   function matchedStudents() {
     return DATA.students.filter(s => {
       const cohortOk = state.assignCohort === "all" || s.cohort === Number(state.assignCohort);
-      const tagOk = state.assignTag === "all" || s.tags.includes(state.assignTag);
+      const tagOk = state.assignTags.length === 0 || s.tags.some(t => state.assignTags.includes(t));
       return cohortOk && tagOk;
     });
   }
@@ -339,11 +346,10 @@
         </select>
       </div>
       <div class="field">
-        <label>Tag</label>
-        <select id="assignTagSelect">
-          <option value="all">All tags</option>
-          ${ALL_TAGS.map(t => `<option value="${t}" ${state.assignTag === t ? "selected" : ""}>${t}</option>`).join("")}
-        </select>
+        <label>Tags (any of)</label>
+        <div class="tag-chip-select" id="assignTagChips">
+          ${ALL_TAGS.map(t => `<button type="button" class="tag-chip ${state.assignTags.includes(t) ? "active" : ""}" data-tag="${t}">${t}</button>`).join("")}
+        </div>
       </div>
       <div class="field">
         <label>Assign to counselor</label>
@@ -356,11 +362,20 @@
 
     document.getElementById("assignCohortSelect").addEventListener("change", e => {
       state.assignCohort = e.target.value;
-      renderAdminAssign();
+      renderAdminAssignSummaryAndTable();
     });
-    document.getElementById("assignTagSelect").addEventListener("change", e => {
-      state.assignTag = e.target.value;
-      renderAdminAssign();
+    document.getElementById("assignTagChips").addEventListener("click", e => {
+      const chip = e.target.closest("button[data-tag]");
+      if (!chip) return;
+      const tag = chip.dataset.tag;
+      const idx = state.assignTags.indexOf(tag);
+      if (idx === -1) {
+        state.assignTags.push(tag);
+      } else {
+        state.assignTags.splice(idx, 1);
+      }
+      chip.classList.toggle("active");
+      renderAdminAssignSummaryAndTable();
     });
     document.getElementById("assignCounselorSelect").addEventListener("change", e => {
       state.assignCounselorId = e.target.value;
@@ -418,6 +433,114 @@
       .join("");
   }
 
+  // ---- Manage Assignments (reassign existing students to a different counselor) ----
+
+  function reassignStudent(studentId, newCounselorId) {
+    const assignment = assignmentForStudent(studentId);
+    if (!assignment) return;
+    assignment.counselorId = newCounselorId;
+  }
+
+  function renderAdminManage() {
+    document.getElementById("reassignBulkBar").innerHTML = `
+      <div class="field">
+        <label>Reassign everyone from</label>
+        <select id="reassignFromSelect">
+          <option value="">Select counselor…</option>
+          ${DATA.counselors.map(c => `<option value="${c.id}" ${state.reassignFrom === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label>to</label>
+        <select id="reassignToSelect">
+          <option value="">Select counselor…</option>
+          ${DATA.counselors.map(c => `<option value="${c.id}" ${state.reassignTo === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+        </select>
+      </div>
+      <button class="primary" id="reassignBulkBtn" ${!state.reassignFrom || !state.reassignTo || state.reassignFrom === state.reassignTo ? "disabled" : ""}>Reassign all</button>
+    `;
+    document.getElementById("reassignFromSelect").addEventListener("change", e => {
+      state.reassignFrom = e.target.value;
+      renderAdminManage();
+    });
+    document.getElementById("reassignToSelect").addEventListener("change", e => {
+      state.reassignTo = e.target.value;
+      renderAdminManage();
+    });
+    const bulkBtn = document.getElementById("reassignBulkBtn");
+    if (bulkBtn) {
+      bulkBtn.addEventListener("click", () => {
+        const fromC = counselorById(state.reassignFrom);
+        const toC = counselorById(state.reassignTo);
+        const moved = assignmentsForCounselor(state.reassignFrom);
+        moved.forEach(a => (a.counselorId = state.reassignTo));
+        showToast(`Moved ${moved.length} student(s) from ${fromC.name} to ${toC.name}.`);
+        state.reassignFrom = "";
+        state.reassignTo = "";
+        renderAdminManage();
+      });
+    }
+
+    document.getElementById("manageFilters").innerHTML = `
+      <div class="field">
+        <label>Filter by current counselor</label>
+        <select id="manageFilterSelect">
+          <option value="all">All counselors</option>
+          ${DATA.counselors.map(c => `<option value="${c.id}" ${state.manageFilterCounselor === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+        </select>
+      </div>
+    `;
+    document.getElementById("manageFilterSelect").addEventListener("change", e => {
+      state.manageFilterCounselor = e.target.value;
+      renderManageTable();
+    });
+
+    renderManageTable();
+  }
+
+  function renderManageTable() {
+    const assigned = DATA.assignments
+      .filter(a => state.manageFilterCounselor === "all" || a.counselorId === state.manageFilterCounselor)
+      .map(a => ({ assignment: a, student: studentById(a.studentId) }));
+
+    const tbody = document.getElementById("manageTable");
+    if (assigned.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No assigned students match this filter.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = assigned
+      .map(
+        ({ assignment, student: s }) => `
+        <tr>
+          <td><button class="ticket-link" data-view-student="${s.id}">${s.name}</button></td>
+          <td><span class="badge cohort-${s.cohort}">${COHORT_LABELS[s.cohort]}</span></td>
+          <td><div class="tag-list">${s.tags.map(t => `<span class="badge tag-badge">${t}</span>`).join("") || '<span class="muted">—</span>'}</div></td>
+          <td>
+            <select class="row-reassign-select" data-reassign-student="${s.id}">
+              ${DATA.counselors.map(c => `<option value="${c.id}" ${assignment.counselorId === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+            </select>
+          </td>
+        </tr>`
+      )
+      .join("");
+
+    tbody.querySelectorAll("select[data-reassign-student]").forEach(sel => {
+      sel.addEventListener("change", e => {
+        const studentId = e.target.dataset.reassignStudent;
+        const newCounselorId = e.target.value;
+        const student = studentById(studentId);
+        const newCounselor = counselorById(newCounselorId);
+        reassignStudent(studentId, newCounselorId);
+        showToast(`Reassigned ${student.name} to ${newCounselor.name}.`);
+        renderManageTable();
+      });
+    });
+
+    tbody.querySelectorAll("button[data-view-student]").forEach(btn => {
+      btn.addEventListener("click", () => openDrawer(btn.dataset.viewStudent, { adminMode: true }));
+    });
+  }
+
   // ---- 7.1 Onboard Counselor ----
 
   function renderAdminOnboard() {
@@ -455,14 +578,16 @@
 
   function closeDrawer() {
     state.openStudentId = null;
+    state.drawerAdminMode = false;
     document.getElementById("studentDrawer").classList.remove("open");
     document.getElementById("studentDrawer").setAttribute("aria-hidden", "true");
     document.getElementById("drawerScrim").hidden = true;
   }
 
-  function openDrawer(studentId) {
+  function openDrawer(studentId, opts) {
     state.openStudentId = studentId;
     state.graphRange = 7;
+    state.drawerAdminMode = !!(opts && opts.adminMode);
     renderDrawer();
     document.getElementById("drawerScrim").hidden = false;
     const drawer = document.getElementById("studentDrawer");
@@ -473,6 +598,9 @@
   function renderDrawer() {
     const s = studentById(state.openStudentId);
     const drawer = document.getElementById("studentDrawer");
+    const assignment = assignmentForStudent(s.id);
+    const currentCounselor = assignment ? counselorById(assignment.counselorId) : null;
+
     drawer.innerHTML = `
       <div class="drawer-head">
         <strong>Student Detail</strong>
@@ -490,6 +618,18 @@
             <dt>Student ID</dt><dd>${s.id}</dd>
           </dl>
         </div>
+
+        ${state.drawerAdminMode ? `
+        <div class="drawer-card">
+          <h3>Assignment</h3>
+          <div class="field">
+            <label>Assigned counselor</label>
+            <select id="drawerReassignSelect">
+              <option value="">Unassigned</option>
+              ${DATA.counselors.map(c => `<option value="${c.id}" ${currentCounselor && currentCounselor.id === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+            </select>
+          </div>
+        </div>` : ""}
 
         <div class="drawer-card" id="tagPanelsCard">
           <h3>Tag-specific context</h3>
@@ -512,10 +652,11 @@
           ${renderCallHistory(s.id)}
         </div>
 
+        ${state.drawerAdminMode ? "" : `
         <div class="drawer-card">
           <h3>Log a call</h3>
           ${renderCallForm(s)}
-        </div>
+        </div>`}
       </div>
     `;
 
@@ -532,7 +673,22 @@
       });
     }
 
-    bindCallForm(s);
+    if (state.drawerAdminMode) {
+      const reassignSelect = drawer.querySelector("#drawerReassignSelect");
+      if (reassignSelect && assignment) {
+        reassignSelect.addEventListener("change", e => {
+          const newCounselorId = e.target.value;
+          if (!newCounselorId) return; // unassigning from the drawer isn't supported — use Assign Leads to reassign instead
+          const newCounselor = counselorById(newCounselorId);
+          reassignStudent(s.id, newCounselorId);
+          showToast(`Reassigned ${s.name} to ${newCounselor.name}.`);
+          renderDrawer();
+          if (document.getElementById("manageTable")) renderManageTable();
+        });
+      }
+    } else {
+      bindCallForm(s);
+    }
   }
 
   // ---- tag panels (Section 8 mapping) ----

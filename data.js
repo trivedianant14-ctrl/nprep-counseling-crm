@@ -3283,12 +3283,6 @@ window.SEED_DATA = {
   ],
   "assignments": [
     {
-      "id": "a1",
-      "studentId": "121580",
-      "counselorId": "c1",
-      "assignedDate": "2026-07-01"
-    },
-    {
       "id": "a2",
       "studentId": "14398",
       "counselorId": "c2",
@@ -3310,12 +3304,6 @@ window.SEED_DATA = {
       "id": "a5",
       "studentId": "11797",
       "counselorId": "c1",
-      "assignedDate": "2026-07-01"
-    },
-    {
-      "id": "a6",
-      "studentId": "3367",
-      "counselorId": "c2",
       "assignedDate": "2026-07-01"
     },
     {
@@ -3343,12 +3331,6 @@ window.SEED_DATA = {
       "assignedDate": "2026-07-01"
     },
     {
-      "id": "a11",
-      "studentId": "49872",
-      "counselorId": "c3",
-      "assignedDate": "2026-07-01"
-    },
-    {
       "id": "a12",
       "studentId": "1450",
       "counselorId": "c4",
@@ -3370,12 +3352,6 @@ window.SEED_DATA = {
       "id": "a15",
       "studentId": "25262",
       "counselorId": "c3",
-      "assignedDate": "2026-07-01"
-    },
-    {
-      "id": "a16",
-      "studentId": "3867",
-      "counselorId": "c4",
       "assignedDate": "2026-07-01"
     },
     {
@@ -3403,12 +3379,6 @@ window.SEED_DATA = {
       "assignedDate": "2026-07-01"
     },
     {
-      "id": "a21",
-      "studentId": "43117",
-      "counselorId": "c1",
-      "assignedDate": "2026-07-01"
-    },
-    {
       "id": "a22",
       "studentId": "24111",
       "counselorId": "c2",
@@ -3430,12 +3400,6 @@ window.SEED_DATA = {
       "id": "a25",
       "studentId": "21905",
       "counselorId": "c1",
-      "assignedDate": "2026-07-01"
-    },
-    {
-      "id": "a26",
-      "studentId": "145511",
-      "counselorId": "c2",
       "assignedDate": "2026-07-01"
     },
     {
@@ -3463,12 +3427,6 @@ window.SEED_DATA = {
       "assignedDate": "2026-07-01"
     },
     {
-      "id": "a31",
-      "studentId": "133003",
-      "counselorId": "c3",
-      "assignedDate": "2026-07-01"
-    },
-    {
       "id": "a32",
       "studentId": "49920",
       "counselorId": "c4",
@@ -3490,12 +3448,6 @@ window.SEED_DATA = {
       "id": "a35",
       "studentId": "15365",
       "counselorId": "c3",
-      "assignedDate": "2026-07-01"
-    },
-    {
-      "id": "a36",
-      "studentId": "3793",
-      "counselorId": "c4",
       "assignedDate": "2026-07-01"
     },
     {
@@ -3523,12 +3475,6 @@ window.SEED_DATA = {
       "assignedDate": "2026-07-01"
     },
     {
-      "id": "a41",
-      "studentId": "84114",
-      "counselorId": "c1",
-      "assignedDate": "2026-07-01"
-    },
-    {
       "id": "a42",
       "studentId": "52881",
       "counselorId": "c2",
@@ -3550,12 +3496,6 @@ window.SEED_DATA = {
       "id": "a45",
       "studentId": "813",
       "counselorId": "c1",
-      "assignedDate": "2026-07-01"
-    },
-    {
-      "id": "a46",
-      "studentId": "1916",
-      "counselorId": "c2",
       "assignedDate": "2026-07-01"
     },
     {

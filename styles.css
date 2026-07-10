@@ -752,3 +752,71 @@ textarea {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ---- tag chip multi-select ---- */
+
+.tag-chip-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 420px;
+}
+
+.tag-chip {
+  border: 1px solid var(--line-strong);
+  background: #ffffff;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.tag-chip.active {
+  border-color: var(--purple);
+  background: var(--purple-soft);
+  color: var(--purple);
+}
+
+/* ---- admin: manage assignments ---- */
+
+.reassign-bar {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  margin-bottom: 12px;
+}
+
+.reassign-bar .field {
+  min-width: 180px;
+}
+
+.row-reassign-select {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.unassigned-badge {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.ticket-link {
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-weight: 800;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ticket-link:hover {
+  text-decoration: underline;
+}

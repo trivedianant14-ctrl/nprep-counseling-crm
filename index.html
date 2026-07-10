@@ -90,6 +90,7 @@
           <section class="ticket-tabs" id="adminTabs" aria-label="Admin views">
             <button class="active" data-admin-view="overview">Assignment Overview</button>
             <button data-admin-view="assign">Assign Leads</button>
+            <button data-admin-view="manage">Manage Assignments</button>
             <button data-admin-view="onboard">Onboard Counselor</button>
           </section>
 
@@ -140,6 +141,33 @@
                     </tr>
                   </thead>
                   <tbody id="assignMatchTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <!-- Manage Assignments (reassign existing students, e.g. counselor out sick) -->
+          <section class="main-grid no-side" id="adminManageView" hidden>
+            <article class="table-panel">
+              <div class="table-meta">
+                <strong>Reassign existing students</strong>
+                <span>Move students between counselors — individually, or the whole queue at once.</span>
+              </div>
+              <div style="padding:16px">
+                <div class="assign-filters" id="reassignBulkBar"></div>
+                <div class="assign-filters" id="manageFilters"></div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Cohort</th>
+                      <th>Tags</th>
+                      <th>Reassign to</th>
+                    </tr>
+                  </thead>
+                  <tbody id="manageTable"></tbody>
                 </table>
               </div>
             </article>
