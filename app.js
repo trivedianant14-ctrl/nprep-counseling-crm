@@ -19,9 +19,10 @@
     assignCohort: "all",
     assignTags: [],
     assignCounselorId: "",
+    selectedAssignIds: new Set(),
     manageFilterCounselor: "all",
-    reassignFrom: "",
-    reassignTo: "",
+    selectedManageIds: new Set(),
+    manageBulkCounselorId: "",
     drawerAdminMode: false
   };
 
@@ -352,7 +353,7 @@
         </div>
       </div>
       <div class="field">
-        <label>Assign to counselor</label>
+        <label>Assign selected to</label>
         <select id="assignCounselorSelect">
           <option value="">Select counselor…</option>
           ${DATA.counselors.map(c => `<option value="${c.id}" ${state.assignCounselorId === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
@@ -362,6 +363,7 @@
 
     document.getElementById("assignCohortSelect").addEventListener("change", e => {
       state.assignCohort = e.target.value;
+      state.selectedAssignIds.clear();
       renderAdminAssignSummaryAndTable();
     });
     document.getElementById("assignTagChips").addEventListener("click", e => {
@@ -375,32 +377,50 @@
         state.assignTags.splice(idx, 1);
       }
       chip.classList.toggle("active");
+      state.selectedAssignIds.clear();
       renderAdminAssignSummaryAndTable();
     });
     document.getElementById("assignCounselorSelect").addEventListener("change", e => {
       state.assignCounselorId = e.target.value;
-      renderAdminAssignSummaryAndTable(); // no need to rebuild filter controls
+      renderAssignBulkBar(); // just the button state, no need to rebuild rows
     });
+
+    const selectAll = document.getElementById("assignSelectAllCheckbox");
+    if (!selectAll.dataset.bound) {
+      selectAll.dataset.bound = "true";
+      selectAll.addEventListener("change", e => {
+        const matches = matchedStudents().filter(s => !assignmentForStudent(s.id));
+        if (e.target.checked) {
+          matches.forEach(s => state.selectedAssignIds.add(s.id));
+        } else {
+          matches.forEach(s => state.selectedAssignIds.delete(s.id));
+        }
+        renderAdminAssignSummaryAndTable();
+      });
+    }
 
     renderAdminAssignSummaryAndTable();
   }
 
-  function renderAdminAssignSummaryAndTable() {
+  function renderAssignBulkBar() {
     const matches = matchedStudents();
-    const unassigned = matches.filter(s => !assignmentForStudent(s.id));
+    const selectable = matches.filter(s => !assignmentForStudent(s.id));
+    const alreadyAssignedCount = matches.length - selectable.length;
+    const selectedCount = selectable.filter(s => state.selectedAssignIds.has(s.id)).length;
     const counselor = counselorById(state.assignCounselorId);
 
     document.getElementById("assignSummary").innerHTML = `
       <span><strong>${matches.length}</strong> students match</span>
-      <span class="muted">${matches.length - unassigned.length} already assigned to a counselor</span>
-      <span class="muted"><strong>${unassigned.length}</strong> will be newly assigned${counselor ? ` to ${counselor.name}` : ""}</span>
-      <button class="primary" id="assignBtn" ${!counselor || unassigned.length === 0 ? "disabled" : ""}>Assign</button>
+      <span class="muted">${alreadyAssignedCount} already assigned</span>
+      <span class="muted"><strong>${selectedCount}</strong> selected</span>
+      <button class="primary" id="assignBtn" ${!counselor || selectedCount === 0 ? "disabled" : ""}>Assign selected</button>
     `;
 
     const btn = document.getElementById("assignBtn");
     if (btn) {
       btn.addEventListener("click", () => {
-        unassigned.forEach(s => {
+        const toAssign = selectable.filter(s => state.selectedAssignIds.has(s.id));
+        toAssign.forEach(s => {
           DATA.assignments.push({
             id: `a${DATA.assignments.length + 1}`,
             studentId: s.id,
@@ -408,14 +428,25 @@
             assignedDate: TODAY
           });
         });
-        showToast(`Assigned ${unassigned.length} student(s) to ${counselor.name}.`);
+        showToast(`Assigned ${toAssign.length} student(s) to ${counselor.name}.`);
+        state.selectedAssignIds.clear();
         renderAdminAssignSummaryAndTable();
       });
     }
 
+    const selectAll = document.getElementById("assignSelectAllCheckbox");
+    selectAll.checked = selectable.length > 0 && selectedCount === selectable.length;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < selectable.length;
+  }
+
+  function renderAdminAssignSummaryAndTable() {
+    const matches = matchedStudents();
+
+    renderAssignBulkBar();
+
     const tbody = document.getElementById("assignMatchTable");
     if (matches.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No students match these filters.</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No students match these filters.</td></tr>`;
       return;
     }
     tbody.innerHTML = matches
@@ -424,6 +455,7 @@
         const existingCounselor = existing ? counselorById(existing.counselorId) : null;
         return `
         <tr>
+          <td><input type="checkbox" data-select-assign="${s.id}" ${state.selectedAssignIds.has(s.id) ? "checked" : ""} ${existing ? "disabled" : ""} /></td>
           <td>${s.name}</td>
           <td><span class="badge cohort-${s.cohort}">${COHORT_LABELS[s.cohort]}</span></td>
           <td><div class="tag-list">${s.tags.map(t => `<span class="badge tag-badge">${t}</span>`).join("") || '<span class="muted">—</span>'}</div></td>
@@ -431,6 +463,15 @@
         </tr>`;
       })
       .join("");
+
+    tbody.querySelectorAll("input[data-select-assign]").forEach(cb => {
+      cb.addEventListener("change", e => {
+        const id = e.target.dataset.selectAssign;
+        if (e.target.checked) state.selectedAssignIds.add(id);
+        else state.selectedAssignIds.delete(id);
+        renderAssignBulkBar();
+      });
+    });
   }
 
   // ---- Manage Assignments (reassign existing students to a different counselor) ----
@@ -441,46 +482,13 @@
     assignment.counselorId = newCounselorId;
   }
 
-  function renderAdminManage() {
-    document.getElementById("reassignBulkBar").innerHTML = `
-      <div class="field">
-        <label>Reassign everyone from</label>
-        <select id="reassignFromSelect">
-          <option value="">Select counselor…</option>
-          ${DATA.counselors.map(c => `<option value="${c.id}" ${state.reassignFrom === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
-        </select>
-      </div>
-      <div class="field">
-        <label>to</label>
-        <select id="reassignToSelect">
-          <option value="">Select counselor…</option>
-          ${DATA.counselors.map(c => `<option value="${c.id}" ${state.reassignTo === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
-        </select>
-      </div>
-      <button class="primary" id="reassignBulkBtn" ${!state.reassignFrom || !state.reassignTo || state.reassignFrom === state.reassignTo ? "disabled" : ""}>Reassign all</button>
-    `;
-    document.getElementById("reassignFromSelect").addEventListener("change", e => {
-      state.reassignFrom = e.target.value;
-      renderAdminManage();
-    });
-    document.getElementById("reassignToSelect").addEventListener("change", e => {
-      state.reassignTo = e.target.value;
-      renderAdminManage();
-    });
-    const bulkBtn = document.getElementById("reassignBulkBtn");
-    if (bulkBtn) {
-      bulkBtn.addEventListener("click", () => {
-        const fromC = counselorById(state.reassignFrom);
-        const toC = counselorById(state.reassignTo);
-        const moved = assignmentsForCounselor(state.reassignFrom);
-        moved.forEach(a => (a.counselorId = state.reassignTo));
-        showToast(`Moved ${moved.length} student(s) from ${fromC.name} to ${toC.name}.`);
-        state.reassignFrom = "";
-        state.reassignTo = "";
-        renderAdminManage();
-      });
-    }
+  function visibleManageAssignments() {
+    return DATA.assignments
+      .filter(a => state.manageFilterCounselor === "all" || a.counselorId === state.manageFilterCounselor)
+      .map(a => ({ assignment: a, student: studentById(a.studentId) }));
+  }
 
+  function renderAdminManage() {
     document.getElementById("manageFilters").innerHTML = `
       <div class="field">
         <label>Filter by current counselor</label>
@@ -492,26 +500,78 @@
     `;
     document.getElementById("manageFilterSelect").addEventListener("change", e => {
       state.manageFilterCounselor = e.target.value;
+      state.selectedManageIds.clear();
       renderManageTable();
     });
+
+    const selectAll = document.getElementById("manageSelectAllCheckbox");
+    if (!selectAll.dataset.bound) {
+      selectAll.dataset.bound = "true";
+      selectAll.addEventListener("change", e => {
+        const visible = visibleManageAssignments();
+        if (e.target.checked) {
+          visible.forEach(({ student }) => state.selectedManageIds.add(student.id));
+        } else {
+          visible.forEach(({ student }) => state.selectedManageIds.delete(student.id));
+        }
+        renderManageTable();
+      });
+    }
 
     renderManageTable();
   }
 
+  function renderManageBulkBar(visible) {
+    const selectedCount = visible.filter(({ student }) => state.selectedManageIds.has(student.id)).length;
+    const counselor = counselorById(state.manageBulkCounselorId);
+
+    document.getElementById("manageBulkBar").innerHTML = `
+      <span><strong>${selectedCount}</strong> selected</span>
+      <select id="manageBulkCounselorSelect">
+        <option value="">Reassign selected to…</option>
+        ${DATA.counselors.map(c => `<option value="${c.id}" ${state.manageBulkCounselorId === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+      </select>
+      <button class="primary" id="manageBulkBtn" ${!counselor || selectedCount === 0 ? "disabled" : ""}>Reassign selected</button>
+    `;
+
+    document.getElementById("manageBulkCounselorSelect").addEventListener("change", e => {
+      state.manageBulkCounselorId = e.target.value;
+      renderManageBulkBar(visible);
+    });
+
+    const btn = document.getElementById("manageBulkBtn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        const toMove = visible.filter(({ student }) => state.selectedManageIds.has(student.id));
+        toMove.forEach(({ student }) => reassignStudent(student.id, state.manageBulkCounselorId));
+        showToast(`Reassigned ${toMove.length} student(s) to ${counselor.name}.`);
+        state.selectedManageIds.clear();
+        state.manageBulkCounselorId = "";
+        renderManageTable();
+      });
+    }
+  }
+
   function renderManageTable() {
-    const assigned = DATA.assignments
-      .filter(a => state.manageFilterCounselor === "all" || a.counselorId === state.manageFilterCounselor)
-      .map(a => ({ assignment: a, student: studentById(a.studentId) }));
+    const visible = visibleManageAssignments();
+
+    renderManageBulkBar(visible);
+
+    const selectAll = document.getElementById("manageSelectAllCheckbox");
+    const selectedCount = visible.filter(({ student }) => state.selectedManageIds.has(student.id)).length;
+    selectAll.checked = visible.length > 0 && selectedCount === visible.length;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < visible.length;
 
     const tbody = document.getElementById("manageTable");
-    if (assigned.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No assigned students match this filter.</td></tr>`;
+    if (visible.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No assigned students match this filter.</td></tr>`;
       return;
     }
-    tbody.innerHTML = assigned
+    tbody.innerHTML = visible
       .map(
         ({ assignment, student: s }) => `
         <tr>
+          <td><input type="checkbox" data-select-manage="${s.id}" ${state.selectedManageIds.has(s.id) ? "checked" : ""} /></td>
           <td><button class="ticket-link" data-view-student="${s.id}">${s.name}</button></td>
           <td><span class="badge cohort-${s.cohort}">${COHORT_LABELS[s.cohort]}</span></td>
           <td><div class="tag-list">${s.tags.map(t => `<span class="badge tag-badge">${t}</span>`).join("") || '<span class="muted">—</span>'}</div></td>
@@ -523,6 +583,19 @@
         </tr>`
       )
       .join("");
+
+    tbody.querySelectorAll("input[data-select-manage]").forEach(cb => {
+      cb.addEventListener("change", e => {
+        const id = e.target.dataset.selectManage;
+        if (e.target.checked) state.selectedManageIds.add(id);
+        else state.selectedManageIds.delete(id);
+        renderManageBulkBar(visible);
+        const sa = document.getElementById("manageSelectAllCheckbox");
+        const sel = visible.filter(({ student }) => state.selectedManageIds.has(student.id)).length;
+        sa.checked = visible.length > 0 && sel === visible.length;
+        sa.indeterminate = sel > 0 && sel < visible.length;
+      });
+    });
 
     tbody.querySelectorAll("select[data-reassign-student]").forEach(sel => {
       sel.addEventListener("change", e => {
