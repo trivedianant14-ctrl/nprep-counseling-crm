@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NPrep Counseling CRM</title>
+    <link rel="stylesheet" href="./styles.css?v=2" />
+  </head>
+  <body>
+    <main class="crm-shell">
+      <section class="workspace">
+        <header class="app-header">
+          <div class="brand">
+            <span class="logo">NC</span>
+            <strong>NPrep Counseling CRM</strong>
+          </div>
+          <nav class="product-nav" id="productNav" aria-label="Sections">
+            <button class="active" data-section="queue">Call Queue</button>
+            <button data-section="admin">Admin</button>
+          </nav>
+          <div class="user-cluster" id="userCluster"></div>
+        </header>
+
+        <!-- ===================== COUNSELOR: LOGIN ===================== -->
+        <section id="loginSection" class="login-wrap" hidden>
+          <form class="login-card" id="loginForm">
+            <span class="eyebrow">Counselor Login</span>
+            <h1>Sign in to your queue</h1>
+            <p class="muted login-hint">Prototype auth — hardcoded credentials, not secure. See PRD Section 3.</p>
+            <div class="field">
+              <label>Email</label>
+              <input type="text" name="email" placeholder="you@nprep.in" autocomplete="username" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" />
+            </div>
+            <p class="field-error" id="loginError" hidden></p>
+            <button type="submit" class="primary">Log in</button>
+            <p class="muted login-hint" id="loginDemoHint"></p>
+          </form>
+        </section>
+
+        <!-- ===================== COUNSELOR: CALL QUEUE ===================== -->
+        <section id="queueSection" hidden>
+          <section class="page-head">
+            <div>
+              <span class="eyebrow">Counselor Workspace</span>
+              <h1 id="queueTitle">Call Queue</h1>
+            </div>
+          </section>
+
+          <section class="stats-row" id="statsRow" aria-label="Queue metrics"></section>
+
+          <section class="ticket-tabs" id="queueTabs" aria-label="Queue status filters"></section>
+
+          <section class="main-grid no-side">
+            <article class="table-panel">
+              <div class="table-meta">
+                <strong id="tableTitle">Pending</strong>
+                <span id="tableSubtitle">Assigned students awaiting first contact.</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Cohort</th>
+                      <th>Tags</th>
+                      <th>Last call</th>
+                      <th>Next follow-up</th>
+                    </tr>
+                  </thead>
+                  <tbody id="queueTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        </section>
+
+        <!-- ===================== ADMIN ===================== -->
+        <section id="adminSection" hidden>
+          <section class="page-head">
+            <div>
+              <span class="eyebrow">Admin</span>
+              <h1 id="adminTitle">Assignment Overview</h1>
+            </div>
+          </section>
+
+          <section class="ticket-tabs" id="adminTabs" aria-label="Admin views">
+            <button class="active" data-admin-view="overview">Assignment Overview</button>
+            <button data-admin-view="assign">Assign Leads</button>
+            <button data-admin-view="onboard">Onboard Counselor</button>
+          </section>
+
+          <!-- 7.3 Assignment Overview -->
+          <section class="main-grid no-side" id="adminOverviewView">
+            <article class="table-panel">
+              <div class="table-meta">
+                <strong>Counselors</strong>
+                <span>Read-only summary — assigned load and queue breakdown per counselor.</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Counselor</th>
+                      <th>Total assigned</th>
+                      <th>Pending</th>
+                      <th>Today's follow-ups</th>
+                      <th>Upcoming</th>
+                      <th>Completed</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <!-- 7.2 Assign Leads -->
+          <section class="main-grid no-side" id="adminAssignView" hidden>
+            <article class="table-panel">
+              <div class="table-meta">
+                <strong>Filter &amp; bulk-assign</strong>
+                <span>Filter students by cohort + tag, then assign the matched set to a counselor.</span>
+              </div>
+              <div style="padding:16px">
+                <div class="assign-filters" id="assignFilters"></div>
+                <div class="assign-summary" id="assignSummary"></div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Cohort</th>
+                      <th>Tags</th>
+                      <th>Current assignment</th>
+                    </tr>
+                  </thead>
+                  <tbody id="assignMatchTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <!-- 7.1 Onboard Counselor -->
+          <section class="main-grid no-side" id="adminOnboardView" hidden>
+            <article class="table-panel">
+              <div class="table-meta">
+                <strong>Onboard a counselor</strong>
+                <span>Adds a new entry to the counselor list (in-memory for this prototype).</span>
+              </div>
+              <div style="padding:16px; max-width:420px">
+                <form class="call-form" id="onboardForm">
+                  <div class="field">
+                    <label>Name</label>
+                    <input type="text" name="name" placeholder="Full name" required />
+                  </div>
+                  <div class="field">
+                    <label>Email</label>
+                    <input type="text" name="email" placeholder="name@nprep.in" required />
+                  </div>
+                  <div class="field">
+                    <label>Password</label>
+                    <input type="text" name="password" placeholder="Prototype-only, plaintext" required />
+                  </div>
+                  <div class="form-actions">
+                    <button type="submit" class="primary">Add counselor</button>
+                  </div>
+                </form>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Password</th>
+                    </tr>
+                  </thead>
+                  <tbody id="onboardTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <section class="drawer-scrim" id="drawerScrim" hidden></section>
+    <aside class="ticket-drawer" id="studentDrawer" aria-label="Student details" aria-hidden="true"></aside>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <script src="./data.js"></script>
+    <script src="./app.js?v=2"></script>
+  </body>
+</html>
